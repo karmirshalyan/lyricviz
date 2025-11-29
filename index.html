@@ -31,45 +31,65 @@
         transition: background-image .45s ease;
     }
 
-    /* винил/обложка */
+    /* винил и текст в одной строке внизу */
+    #bottom-container {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        z-index: 10;
+        padding: 0 20px;
+        box-sizing: border-box;
+    }
+
+    /* винил меньшего размера */
     #vinyl-container {
-        position: absolute;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: min(420px, 80vmin);
-        height: min(420px, 80vmin);
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background: radial-gradient(#111 0%, #000 60%, #000 100%);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        overflow:hidden;
-        z-index: 6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
     }
     #albumImage{
-        width:82%;
-        height:82%;
-        border-radius:50%;
-        object-fit:cover;
+        width: 70%;
+        height: 70%;
+        border-radius: 50%;
+        object-fit: cover;
         transition: opacity .36s ease;
     }
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
     .spinning{ animation:spin 12s linear infinite; }
     .paused{ animation-play-state: paused; }
 
-    /* song info */
-    #song-info{
-        position:absolute;
-        bottom:480px;
-        left:50%;
-        transform:translateX(-50%);
-        text-align:center;
-        z-index:7;
-        pointer-events:none;
+    /* текст песни рядом с винилом */
+    #now-playing-text {
+        font-family: 'Nunito', sans-serif;
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--main-white);
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    #trackName{ font-weight:800; font-size:28px; }
-    #artistName{ font-weight:600; font-size:18px; opacity:.7; margin-top:6px; }
+    #now-playing-track {
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+    #now-playing-artist {
+        font-weight: 600;
+        opacity: 0.8;
+        font-size: 14px;
+    }
 
     /* Контейнер для ОДНОЙ строки лирики */
     #lyric-wrapper{
@@ -80,6 +100,7 @@
         justify-content:center;
         z-index:5;
         pointer-events:none;
+        padding-bottom: 120px; /* отступ снизу для нижней панели */
     }
 
     #lyric-line {
@@ -107,6 +128,10 @@
         0% { opacity:1; transform: translateY(0) scale(1); }
         100% { opacity:0; transform: translateY(40px) scale(.98); }
     }
+    @keyframes fadeOutUp {
+        0% { opacity:1; transform: translateY(0) scale(1); }
+        100% { opacity:0; transform: translateY(-40px) scale(.98); }
+    }
     @keyframes slideLeftIn {
         0% { opacity:0; transform: translateX(-120%) rotate(-2deg); }
         60% { opacity:1; transform: translateX(8px) rotate(0deg); }
@@ -131,6 +156,24 @@
         0% { opacity:0; transform: scale(.6); }
         60% { opacity:1; transform: scale(1.06); }
         100% { transform: scale(1); }
+    }
+    @keyframes bounceIn {
+        0% { opacity:0; transform: scale(0.3) translateY(100px); }
+        50% { opacity:1; transform: scale(1.05) translateY(-10px); }
+        70% { transform: scale(0.95) translateY(5px); }
+        100% { opacity:1; transform: scale(1) translateY(0); }
+    }
+    @keyframes flipIn {
+        0% { opacity:0; transform: perspective(400px) rotateX(90deg); }
+        40% { opacity:1; transform: perspective(400px) rotateX(-10deg); }
+        70% { transform: perspective(400px) rotateX(5deg); }
+        100% { opacity:1; transform: perspective(400px) rotateX(0deg); }
+    }
+    @keyframes swingIn {
+        0% { opacity:0; transform: rotate(-15deg) scale(0.8); }
+        60% { opacity:1; transform: rotate(5deg) scale(1.02); }
+        80% { transform: rotate(-2deg) scale(0.98); }
+        100% { opacity:1; transform: rotate(0) scale(1); }
     }
 
     /* typewriter: мы раскладываем буквы в span'ы и применяем staggered animation */
@@ -190,19 +233,57 @@
 
     /* helper classes to control animate-in/out timing */
     .in-fadeZoom { animation: fadeZoomIn .85s cubic-bezier(.2,.9,.3,1) forwards; }
-    .out-fade { animation: fadeOutDown .55s ease forwards; }
+    .out-fade { animation: fadeOutDown .75s ease forwards; }
+    .out-fade-up { animation: fadeOutUp .75s ease forwards; }
     .in-slideLeft { animation: slideLeftIn .82s cubic-bezier(.2,.9,.3,1) forwards; }
     .in-slideRight { animation: slideRightIn .82s cubic-bezier(.2,.9,.3,1) forwards; }
     .in-pop { animation: popIn .72s cubic-bezier(.3,.9,.25,1) forwards; }
     .in-rotate3d { animation: rotateIn3d .9s cubic-bezier(.25,.9,.28,1) forwards; }
     .in-zoomPulse { animation: zoomPulse .8s cubic-bezier(.2,.9,.3,1) forwards; }
+    .in-bounce { animation: bounceIn .9s cubic-bezier(.2,.9,.3,1) forwards; }
+    .in-flip { animation: flipIn 1s cubic-bezier(.25,.9,.28,1) forwards; }
+    .in-swing { animation: swingIn .8s cubic-bezier(.2,.9,.3,1) forwards; }
     .char-animate { animation: charIn .56s cubic-bezier(.2,.9,.2,1) forwards; }
 
     /* responsive adjustments */
     @media (max-width:800px){
-        #song-info{ bottom: 20vh; }
-        #vinyl-container{ width: min(300px, 50vmin); height: min(300px, 50vmin); bottom: 18px; }
+        #bottom-container {
+            gap: 15px;
+            padding: 0 15px;
+        }
+        #vinyl-container {
+            width: 60px;
+            height: 60px;
+        }
+        #now-playing-text {
+            font-size: 14px;
+            max-width: 200px;
+        }
+        #now-playing-artist {
+            font-size: 12px;
+        }
         #lyric-line{ font-size: clamp(20px, 7vw, 42px); }
+        #lyric-wrapper {
+            padding-bottom: 100px;
+        }
+    }
+
+    @media (max-width:480px){
+        #bottom-container {
+            gap: 12px;
+            padding: 0 12px;
+        }
+        #vinyl-container {
+            width: 50px;
+            height: 50px;
+        }
+        #now-playing-text {
+            font-size: 13px;
+            max-width: 180px;
+        }
+        #now-playing-artist {
+            font-size: 11px;
+        }
     }
 </style>
 </head>
@@ -215,11 +296,13 @@
     <div id="lyric-line" aria-live="polite"></div>
 </div>
 
-<!-- винил и инфо (оставлено как у тебя) -->
-<div id="vinyl-container"><img id="albumImage" src="" alt="album cover"></div>
-<div id="song-info">
-    <div id="trackName">Track</div>
-    <div id="artistName">Artist</div>
+<!-- винил и текст в одной строке внизу -->
+<div id="bottom-container">
+    <div id="vinyl-container"><img id="albumImage" src="" alt="album cover"></div>
+    <div id="now-playing-text">
+        <div id="now-playing-track">Track</div>
+        <div id="now-playing-artist">Artist</div>
+    </div>
 </div>
 
 <script>
@@ -375,7 +458,7 @@ function clearDisplayedLyric() {
     currentLyricIndex = -1;
 }
 
-/* список доступных эффектов */
+/* список доступных эффектов - ДОБАВИЛ НОВЫЕ АНИМАЦИИ */
 const EFFECTS = [
     'fadeZoom',    // плавный fade+zoom
     'slideLeft',   // с левого края
@@ -385,6 +468,9 @@ const EFFECTS = [
     'glitch',      // glitch
     'rotate3d',    // 3D rotate
     'zoomPulse',   // zoom + pulse
+    'bounce',      // bounce снизу
+    'flip',        // flip 3D
+    'swing',       // swing rotation
     'particle'     // burst частиц при появлении
 ];
 
@@ -440,8 +526,8 @@ function showLyricLine(objLine) {
     // выбрать эффект
     const effect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
 
-    // общий тайминг: сколько держать строку видимой до следующей (оставляем управляться LRC, но задаём мягкий fail-safe)
-    const visibleDuration = 2400; // минимально оставим 2.4s видимой если LRC быстро
+    // УВЕЛИЧИЛ время отображения текста
+    const visibleDuration = 3500; // было 2400, теперь 3.5 секунды
 
     if (effect === 'typewriter') {
         // разбиваем на символы
@@ -474,7 +560,7 @@ function showLyricLine(objLine) {
         lyricEl.textContent = text;
         // покажем через общий in-fadeZoom
         lyricEl.classList.add('in-fadeZoom');
-        scheduleAutoClear(2100);
+        scheduleAutoClear(visibleDuration);
         return;
     }
 
@@ -487,7 +573,7 @@ function showLyricLine(objLine) {
         const cx = window.innerWidth/2 + (Math.random()-0.5)*40;
         const cy = window.innerHeight/2;
         setTimeout(()=> createParticleBurst(cx, cy, 'rgba(255,255,255,0.95)', 22), 80);
-        scheduleAutoClear(2200);
+        scheduleAutoClear(visibleDuration);
         return;
     }
 
@@ -496,37 +582,52 @@ function showLyricLine(objLine) {
         case 'fadeZoom':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-fadeZoom');
-            scheduleAutoClear(2000);
+            scheduleAutoClear(visibleDuration);
             break;
         case 'slideLeft':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-slideLeft');
-            scheduleAutoClear(2000);
+            scheduleAutoClear(visibleDuration);
             break;
         case 'slideRight':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-slideRight');
-            scheduleAutoClear(2000);
+            scheduleAutoClear(visibleDuration);
             break;
         case 'pop':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-pop');
-            scheduleAutoClear(1900);
+            scheduleAutoClear(visibleDuration);
             break;
         case 'rotate3d':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-rotate3d');
-            scheduleAutoClear(2100);
+            scheduleAutoClear(visibleDuration);
             break;
         case 'zoomPulse':
             lyricEl.textContent = text;
             lyricEl.classList.add('in-zoomPulse');
-            scheduleAutoClear(2000);
+            scheduleAutoClear(visibleDuration);
+            break;
+        case 'bounce':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-bounce');
+            scheduleAutoClear(visibleDuration);
+            break;
+        case 'flip':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-flip');
+            scheduleAutoClear(visibleDuration);
+            break;
+        case 'swing':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-swing');
+            scheduleAutoClear(visibleDuration);
             break;
         default:
             lyricEl.textContent = text;
             lyricEl.classList.add('in-fadeZoom');
-            scheduleAutoClear(2000);
+            scheduleAutoClear(visibleDuration);
     }
 }
 
@@ -535,14 +636,17 @@ let autoClearTimeout = null;
 function scheduleAutoClear(ms) {
     if (autoClearTimeout) clearTimeout(autoClearTimeout);
     autoClearTimeout = setTimeout(()=> {
-        lyricEl.classList.remove('in-fadeZoom','in-slideLeft','in-slideRight','in-pop','in-rotate3d','in-zoomPulse','char-animate');
-        // добавляем класс выхода
-        lyricEl.classList.add('out-fade');
+        lyricEl.classList.remove('in-fadeZoom','in-slideLeft','in-slideRight','in-pop','in-rotate3d','in-zoomPulse','in-bounce','in-flip','in-swing','char-animate');
+        // случайный выбор анимации выхода
+        const exitAnimations = ['out-fade', 'out-fade-up'];
+        const exitEffect = exitAnimations[Math.floor(Math.random() * exitAnimations.length)];
+        
+        lyricEl.classList.add(exitEffect);
         setTimeout(()=> {
             lyricEl.innerHTML = '';
             lyricEl.className = '';
             clearParticles();
-        }, 520);
+        }, 750); // УВЕЛИЧИЛ время анимации выхода
     }, ms);
 }
 
@@ -601,8 +705,9 @@ function fetchSong(token) {
             lastTrackId = track.id;
             lyrics = [];
             currentLyricIndex = -1;
-            document.getElementById('trackName').textContent = track.name;
-            document.getElementById('artistName').textContent = track.artists.map(a=>a.name).join(', ');
+            // Обновляем текст в нижней панели
+            document.getElementById('now-playing-track').textContent = track.name;
+            document.getElementById('now-playing-artist').textContent = track.artists.map(a=>a.name).join(', ');
             fetchLyrics(track.name, track.artists[0].name, track.album.name, track.duration_ms/1000);
         }
 
