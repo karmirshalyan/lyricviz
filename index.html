@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spotify Now Playing</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Nunito', sans-serif;
+        overflow: hidden;
+        background: #000;
+        color: white;
+        min-height: 100vh;
+        display: flex; 
+        align-items: center;
+        justify-content: center;
+        position: relative; 
+    }
+
+    #blur-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-size: cover;
+        background-position: center;
+        filter: blur(40px) brightness(0.4);
+        z-index: -1;
+        transform: scale(1.2);
+        transition: background-image 0.5s ease;
+    }
+
+    #vinyl-container {
+        position: absolute; 
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(420px, 80vmin);
+        height: min(420px, 80vmin);
+        border-radius: 50%;
+        background: radial-gradient(#111 0%, #000 60%, #000 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        z-index: 2;
+    }
+
+    #albumImage {
+        width: 82%;
+        height: 82%;
+        border-radius: 50%;
+        object-fit: cover;
+        transition: opacity 0.4s ease;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .spinning {
+        animation: spin 12s linear infinite;
+    }
+    .paused {
+        animation-play-state: paused;
+    }
+
+    #song-info {
+        position: absolute;
+        bottom: 480px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        font-size: 28px;
+        font-weight: 700;
+        z-index: 3;
+        width: 90%;
+        max-width: 600px;
+        word-wrap: break-word;
+    }
+
+    #artistName {
+        font-size: 20px;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+
+    /* ============ COTODAMA STYLE LYRICS =============== */
+
+    #lyrics-container {
+        position: absolute;
+        top: 48%;
+        left: 50%;
+        width: 92vw;
+        height: 80vh;
+        transform: translate(-50%, -50%);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .lyric-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 30px;
+        padding: 0 10px;
+    }
+
+    .lyric-line {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        letter-spacing: 0.5px;
+        color: rgba(255, 255, 255, 0.25);
+        transform: translateY(40px);
+        opacity: 0;
+        transition: all 0.8s cubic-bezier(0.21, 0.98, 0.6, 1);
+        white-space: normal;
+        line-height: 1.2;
+    }
+
+    .lyric-line.show {
+        opacity: 0.45;
+        transform: translateY(0px);
+    }
+
+    .lyric-line.active {
+        opacity: 1 !important;
+        color: #fff !important;
+        transform: translateY(-12px) scale(1.22);
+        filter: drop-shadow(0 0 25px rgba(255,255,255,0.6));
+    }
+</style>
+</head>
+
+<body>
+
+<div id="blur-bg"></div>
+
+<!-- LYRICS -->
+<div id="lyrics-container"></div>
+
+<!-- VINYL -->
+<div id="vinyl-container">
+    <img id="albumImage" src="" />
+</div>
+
+<!-- SONG TITLE -->
+<div id="song-info">
+    <div id="trackName">Track</div>
+    <div id="artistName">Artist</div>
+</div>
+
+<script>
+const client_id = "d97a877f3d4b4c6f977e4525ca4884d7";
+const redirect_uri = "https://karmirshalyan.github.io/lyricviz/";
+const scopes = ["user-read-currently-playing", "user-read-playback-state", "streaming"];
+
+let token = null;
+let currentAlbum = '';
+let lyrics = [];
+let playbackStartTime = 0;
+let duration = 0;
+let isPaused = false;
+let lastTrackId = ""; 
+
+/* ===================== AUTH ===================== */
+
+function generateRandomString(length) {
+    let text = "";
+    const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for (let i = 0; i < length; i++)
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+}
+
+async function sha256(plain) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    return btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function saveVerifier(v) { localStorage.setItem("code_verifier", v); }
+function loadVerifier() { return localStorage.getItem("code_verifier"); }
+
+async function startAuth() {
+    const codeVerifier = generateRandomString(64);
+    saveVerifier(codeVerifier);
+
+    const codeChallenge = await sha256(codeVerifier);
+
+    const authUrl =
+        "https://accounts.spotify.com/authorize" +
+        `?client_id=${client_id}` +
+        `&response_type=code` +
+        `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+        `&scope=${encodeURIComponent(scopes.join(" "))}` +
+        `&code_challenge_method=S256` +
+        `&code_challenge=${codeChallenge}`;
+
+    window.location = authUrl;
+}
+
+async function requestAccessToken(code) {
+    const verifier = loadVerifier();
+    const body = new URLSearchParams({
+        client_id,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri,
+        code_verifier: verifier
+    });
+
+    const res = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+    });
+    return await res.json();
+}
+
+async function refreshToken(refresh_token) {
+    const body = new URLSearchParams({
+        client_id,
+        grant_type: "refresh_token",
+        refresh_token
+    });
+
+    const res = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+    });
+    return await res.json();
+}
+
+async function handleAuth() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("code")) {
+        const tokenData = await requestAccessToken(params.get("code"));
+        localStorage.setItem("access_token", tokenData.access_token);
+        localStorage.setItem("refresh_token", tokenData.refresh_token);
+        window.history.replaceState({}, document.title, redirect_uri);
+        return tokenData.access_token;
+    }
+
+    const stored = localStorage.getItem("access_token");
+    if (stored) return stored;
+
+    startAuth();
+}
+
+async function getValidToken() {
+    let token = localStorage.getItem("access_token");
+    const refresh_token = localStorage.getItem("refresh_token");
+
+    if (!token) return handleAuth();
+
+    const test = await fetch("https://api.spotify.com/v1/me", {
+        headers: { Authorization: "Bearer " + token }
+    });
+
+    if (test.status === 401 && refresh_token) {
+        const newTok = await refreshToken(refresh_token);
+        localStorage.setItem("access_token", newTok.access_token);
+        if (newTok.refresh_token)
+            localStorage.setItem("refresh_token", newTok.refresh_token);
+
+        return newTok.access_token;
+    }
+
+    return token;
+}
+
+/* ===================== LYRICS ===================== */
+
+function clearLyrics() {
+    document.getElementById("lyrics-container").innerHTML = "";
+}
+
+function scatterLyrics() {
+    clearLyrics();
+    if (!lyrics.length) return;
+
+    const container = document.getElementById("lyrics-container");
+    const columnsCount = 3;
+    const columns = [];
+
+    for (let i = 0; i < columnsCount; i++) {
+        const col = document.createElement("div");
+        col.className = "lyric-column";
+        container.appendChild(col);
+        columns.push(col);
+    }
+
+    lyrics.forEach((line, i) => {
+        const div = document.createElement("div");
+        div.className = "lyric-line";
+        div.id = `lyric-${i}`;
+        div.textContent = line.text;
+
+        columns[i % columnsCount].appendChild(div);
+
+        setTimeout(() => div.classList.add("show"), 80 * i);
+    });
+}
+
+function highlightLyric(currentIndex) {
+    document.querySelectorAll(".lyric-line")
+        .forEach(el => el.classList.remove("active"));
+
+    const active = document.getElementById(`lyric-${currentIndex}`);
+    if (active) active.classList.add("active");
+}
+
+function parseLRC(lrc) {
+    const lines = lrc.split("\n");
+    return lines.map(line => {
+        const t = line.match(/\[(\d{2}):(\d{2}\.\d{2})]/);
+        if (!t) return null;
+        return {
+            time: parseInt(t[1]) * 60 + parseFloat(t[2]),
+            text: line.replace(/\[.*?]/g, '').trim()
+        };
+    }).filter(x => x);
+}
+
+function updateLyrics() {
+    if (!lyrics.length) return;
+
+    const now = (Date.now() - playbackStartTime) / 1000;
+    const idx = lyrics.findIndex(l => l.time > now) - 1;
+
+    if (idx >= 0) highlightLyric(idx);
+}
+
+function fetchLyrics(track, artist, album, duration) {
+    const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(track)}&artist_name=${encodeURIComponent(artist)}&album_name=${encodeURIComponent(album)}&duration=${duration}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.syncedLyrics) return;
+            lyrics = parseLRC(data.syncedLyrics);
+            scatterLyrics();
+        })
+        .catch(e => console.log(e));
+}
+
+/* ===================== PLAYER ===================== */
+
+async function initPlayer() {
+    token = await getValidToken();
+    setInterval(() => fetchSong(token), 1500);
+    setInterval(updateLyrics, 400);
+}
+
+initPlayer();
+
+function fetchSong(token) {
+    fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data || !data.item) {
+            clearLyrics();
+            lastTrackId = "";
+            return;
+        }
+
+        const track = data.item;
+
+        if (track.id !== lastTrackId) {
+            lastTrackId = track.id;
+            clearLyrics();
+            lyrics = [];
+
+            document.getElementById('trackName').textContent = track.name;
+            document.getElementById('artistName').textContent =
+                track.artists.map(a => a.name).join(', ');
+
+            fetchLyrics(track.name, track.artists[0].name, track.album.name, track.duration_ms / 1000);
+        }
+
+        duration = track.duration_ms / 1000;
+        playbackStartTime = Date.now() - data.progress_ms;
+        isPaused = !data.is_playing;
+
+        const cover = track.album.images[0].url;
+        if (cover !== currentAlbum) {
+            currentAlbum = cover;
+            const albumImg = document.getElementById('albumImage');
+            albumImg.style.opacity = 0;
+
+            setTimeout(() => {
+                albumImg.src = cover;
+                albumImg.style.opacity = 1;
+                document.getElementById('blur-bg').style.backgroundImage = `url(${cover})`;
+            }, 300);
+        }
+
+        updateRotation();
+    })
+    .catch(e => console.log(e));
+}
+
+/* ===================== ROTATION ===================== */
+
+function updateRotation() {
+    const vinyl = document.getElementById('vinyl-container');
+    if (!isPaused) {
+        vinyl.classList.add('spinning');
+        vinyl.classList.remove('paused');
+    } else {
+        vinyl.classList.add('paused');
+    }
+}
+</script>
+</body>
+</html>
