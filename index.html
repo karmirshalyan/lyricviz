@@ -1,41 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spotify Now Playing</title>
-
+<title>Spotify Now Playing — Animated Lyrics</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito:wght@300;700&display=swap" rel="stylesheet">
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: 'Nunito', sans-serif;
-        overflow: hidden;
-        background: #000;
-        color: white;
-        min-height: 100vh;
-        display: flex; 
-        align-items: center;
-        justify-content: center;
-        position: relative; 
+    :root{
+        --main-white: #ffffff;
+        --muted: rgba(255,255,255,0.22);
+    }
+    html,body{
+        height:100%;
+        margin:0;
+        background:#000;
+        color:var(--main-white);
+        font-family:'Nunito', sans-serif;
+        overflow:hidden;
     }
 
+    /* фон блюр для обложки */
     #blur-bg {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        inset: 0;
         background-size: cover;
         background-position: center;
-        filter: blur(40px) brightness(0.4);
-        z-index: -1;
-        transform: scale(1.2);
-        transition: background-image 0.5s ease;
+        filter: blur(38px) brightness(0.36);
+        z-index: 0;
+        transform: scale(1.15);
+        transition: background-image .45s ease;
     }
 
+    /* винил/обложка */
     #vinyl-container {
-        position: absolute; 
+        position: absolute;
         bottom: 30px;
         left: 50%;
         transform: translateX(-50%);
@@ -43,142 +41,208 @@
         height: min(420px, 80vmin);
         border-radius: 50%;
         background: radial-gradient(#111 0%, #000 60%, #000 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        z-index: 2;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:hidden;
+        z-index: 6;
+    }
+    #albumImage{
+        width:82%;
+        height:82%;
+        border-radius:50%;
+        object-fit:cover;
+        transition: opacity .36s ease;
+    }
+    @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    .spinning{ animation:spin 12s linear infinite; }
+    .paused{ animation-play-state: paused; }
+
+    /* song info */
+    #song-info{
+        position:absolute;
+        bottom:480px;
+        left:50%;
+        transform:translateX(-50%);
+        text-align:center;
+        z-index:7;
+        pointer-events:none;
+    }
+    #trackName{ font-weight:800; font-size:28px; }
+    #artistName{ font-weight:600; font-size:18px; opacity:.7; margin-top:6px; }
+
+    /* Контейнер для ОДНОЙ строки лирики */
+    #lyric-wrapper{
+        position:absolute;
+        inset: 0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:5;
+        pointer-events:none;
     }
 
-    #albumImage {
-        width: 82%;
-        height: 82%;
-        border-radius: 50%;
-        object-fit: cover;
-        transition: opacity 0.4s ease;
-    }
-
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    .spinning {
-        animation: spin 12s linear infinite;
-    }
-    .paused {
-        animation-play-state: paused;
-    }
-
-    #song-info {
-        position: absolute;
-        bottom: 480px;
-        left: 50%;
-        transform: translateX(-50%);
-        text-align: center;
-        font-size: 28px;
-        font-weight: 700;
-        z-index: 3;
-        width: 90%;
-        max-width: 600px;
-        word-wrap: break-word;
-    }
-
-    #artistName {
-        font-size: 20px;
-        opacity: 0.7;
-        margin-top: 4px;
-    }
-
-    /* ============ COTODAMA STYLE LYRICS =============== */
-
-    #lyrics-container {
-        position: absolute;
-        top: 48%;
-        left: 50%;
-        width: 92vw;
-        height: 80vh;
-        transform: translate(-50%, -50%);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        pointer-events: none;
-        z-index: 10;
-    }
-
-    .lyric-column {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 30px;
-        padding: 0 10px;
-    }
-
-    .lyric-line {
+    #lyric-line {
         font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 34px;
-        letter-spacing: 0.5px;
-        color: rgba(255, 255, 255, 0.25);
-        transform: translateY(40px);
+        font-weight:800;
+        font-size: clamp(28px, 6vmin, 72px);
+        color: var(--main-white);
         opacity: 0;
-        transition: all 0.8s cubic-bezier(0.21, 0.98, 0.6, 1);
-        white-space: normal;
-        line-height: 1.2;
+        white-space: nowrap;
+        transform-origin: center;
+        text-align:center;
+        padding: 8px 18px;
+        line-height:1;
+        letter-spacing: .6px;
+        text-shadow: 0 0 20px rgba(255,255,255,0.18), 0 10px 30px rgba(0,0,0,0.6);
     }
 
-    .lyric-line.show {
-        opacity: 0.45;
-        transform: translateY(0px);
+    /* --- Базовые ключевые кадры для входа/выхода --- */
+    @keyframes fadeZoomIn {
+        0% { opacity:0; transform: scale(1.22); filter: blur(6px); }
+        60% { opacity:1; transform: scale(0.98); filter: blur(0); }
+        100% { transform: scale(1); opacity:1; }
+    }
+    @keyframes fadeOutDown {
+        0% { opacity:1; transform: translateY(0) scale(1); }
+        100% { opacity:0; transform: translateY(40px) scale(.98); }
+    }
+    @keyframes slideLeftIn {
+        0% { opacity:0; transform: translateX(-120%) rotate(-2deg); }
+        60% { opacity:1; transform: translateX(8px) rotate(0deg); }
+        100% { transform: translateX(0); }
+    }
+    @keyframes slideRightIn {
+        0% { opacity:0; transform: translateX(120%) rotate(2deg); }
+        60% { opacity:1; transform: translateX(-8px) rotate(0deg); }
+        100% { transform: translateX(0); }
+    }
+    @keyframes popIn {
+        0% { opacity:0; transform: scale(.2) rotate(6deg); }
+        70% { opacity:1; transform: scale(1.12) rotate(-4deg); }
+        100% { transform: scale(1) rotate(0); }
+    }
+    @keyframes rotateIn3d {
+        0% { opacity:0; transform: perspective(800px) translateZ(-400px) rotateX(30deg); }
+        60% { opacity:1; transform: perspective(800px) translateZ(20px) rotateX(0deg); }
+        100% { transform: perspective(800px) translateZ(0) rotateX(0); }
+    }
+    @keyframes zoomPulse {
+        0% { opacity:0; transform: scale(.6); }
+        60% { opacity:1; transform: scale(1.06); }
+        100% { transform: scale(1); }
     }
 
-    .lyric-line.active {
-        opacity: 1 !important;
-        color: #fff !important;
-        transform: translateY(-12px) scale(1.22);
-        filter: drop-shadow(0 0 25px rgba(255,255,255,0.6));
+    /* typewriter: мы раскладываем буквы в span'ы и применяем staggered animation */
+    .char {
+        display:inline-block;
+        opacity:0;
+        transform: translateY(8px) scale(.98);
+    }
+    @keyframes charIn {
+        0%{ opacity:0; transform: translateY(10px) scale(.96); filter: blur(6px); }
+        60%{ opacity:1; transform: translateY(-2px) scale(1.02); filter: blur(0); }
+        100%{ transform: translateY(0) scale(1); opacity:1; }
+    }
+
+    /* glitch (через duplicate layers) */
+    .glitch {
+        position:relative;
+        color:var(--main-white);
+    }
+    .glitch::before, .glitch::after{
+        content: attr(data-text);
+        position:absolute;
+        left:0; top:0;
+        width:100%;
+        opacity:0.7;
+        clip-path: inset(0 0 0 0);
+        pointer-events:none;
+    }
+    .glitch::before{ transform: translate3d(-6px,-2px,0); color:#ff3b3b; mix-blend-mode: screen; animation: glitchA .6s infinite linear; }
+    .glitch::after{ transform: translate3d(6px,2px,0); color:#38f7ff; mix-blend-mode: screen; animation: glitchB .8s infinite linear; }
+    @keyframes glitchA {
+        0%{ clip-path: inset(0 0 80% 0); }
+        20%{ clip-path: inset(10% 0 60% 0); transform: translate3d(-4px,-1px,0); }
+        40%{ clip-path: inset(40% 0 10% 0); transform: translate3d(-6px,-3px,0); }
+        60%{ clip-path: inset(20% 0 50% 0); transform: translate3d(-2px,0,0); }
+        100%{ clip-path: inset(0 0 80% 0); transform: translate3d(-6px,-2px,0); }
+    }
+    @keyframes glitchB {
+        0%{ clip-path: inset(80% 0 0 0); }
+        30%{ clip-path: inset(60% 0 10% 0); transform: translate3d(6px,3px,0); }
+        70%{ clip-path: inset(30% 0 30% 0); transform: translate3d(4px,1px,0); }
+        100%{ clip-path: inset(80% 0 0 0); transform: translate3d(6px,2px,0); }
+    }
+
+    /* particle burst */
+    .particle {
+        position:absolute;
+        width:8px;
+        height:8px;
+        border-radius:50%;
+        background: rgba(255,255,255,0.9);
+        pointer-events:none;
+        z-index:9;
+        transform:translate(-50%,-50%) scale(.6);
+        opacity:0;
+    }
+
+    /* helper classes to control animate-in/out timing */
+    .in-fadeZoom { animation: fadeZoomIn .85s cubic-bezier(.2,.9,.3,1) forwards; }
+    .out-fade { animation: fadeOutDown .55s ease forwards; }
+    .in-slideLeft { animation: slideLeftIn .82s cubic-bezier(.2,.9,.3,1) forwards; }
+    .in-slideRight { animation: slideRightIn .82s cubic-bezier(.2,.9,.3,1) forwards; }
+    .in-pop { animation: popIn .72s cubic-bezier(.3,.9,.25,1) forwards; }
+    .in-rotate3d { animation: rotateIn3d .9s cubic-bezier(.25,.9,.28,1) forwards; }
+    .in-zoomPulse { animation: zoomPulse .8s cubic-bezier(.2,.9,.3,1) forwards; }
+    .char-animate { animation: charIn .56s cubic-bezier(.2,.9,.2,1) forwards; }
+
+    /* responsive adjustments */
+    @media (max-width:800px){
+        #song-info{ bottom: 20vh; }
+        #vinyl-container{ width: min(300px, 50vmin); height: min(300px, 50vmin); bottom: 18px; }
+        #lyric-line{ font-size: clamp(20px, 7vw, 42px); }
     }
 </style>
 </head>
-
 <body>
 
 <div id="blur-bg"></div>
 
-<!-- LYRICS -->
-<div id="lyrics-container"></div>
-
-<!-- VINYL -->
-<div id="vinyl-container">
-    <img id="albumImage" src="" />
+<!-- строка лирики: там всегда одна видимая строка -->
+<div id="lyric-wrapper">
+    <div id="lyric-line" aria-live="polite"></div>
 </div>
 
-<!-- SONG TITLE -->
+<!-- винил и инфо (оставлено как у тебя) -->
+<div id="vinyl-container"><img id="albumImage" src="" alt="album cover"></div>
 <div id="song-info">
     <div id="trackName">Track</div>
     <div id="artistName">Artist</div>
 </div>
 
 <script>
+/* ========== ТВОЯ СТАРАЯ ЛОГИКА AUTH / SPOTIFY ========== */
+// Твои client_id / redirect_uri / scopes — я не меняю логику
 const client_id = "d97a877f3d4b4c6f977e4525ca4884d7";
 const redirect_uri = "https://karmirshalyan.github.io/lyricviz/";
 const scopes = ["user-read-currently-playing", "user-read-playback-state", "streaming"];
 
 let token = null;
 let currentAlbum = '';
-let lyrics = [];
+let lyrics = [];               // {time, text}
 let playbackStartTime = 0;
 let duration = 0;
 let isPaused = false;
-let lastTrackId = ""; 
+let lastTrackId = "";
+let currentLyricIndex = -1;    // индекс текущей показанной строки
 
-/* ===================== AUTH ===================== */
-
+// ====== auth helpers (оставил как было) ======
 function generateRandomString(length) {
     let text = "";
     const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (let i = 0; i < length; i++)
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    for (let i = 0; i < length; i++) text += possible.charAt(Math.floor(Math.random() * possible.length));
     return text;
 }
 
@@ -186,19 +250,15 @@ async function sha256(plain) {
     const encoder = new TextEncoder();
     const data = encoder.encode(plain);
     const hash = await crypto.subtle.digest("SHA-256", data);
-    return btoa(String.fromCharCode(...new Uint8Array(hash)))
-        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-
 function saveVerifier(v) { localStorage.setItem("code_verifier", v); }
 function loadVerifier() { return localStorage.getItem("code_verifier"); }
 
 async function startAuth() {
     const codeVerifier = generateRandomString(64);
     saveVerifier(codeVerifier);
-
     const codeChallenge = await sha256(codeVerifier);
-
     const authUrl =
         "https://accounts.spotify.com/authorize" +
         `?client_id=${client_id}` +
@@ -207,7 +267,6 @@ async function startAuth() {
         `&scope=${encodeURIComponent(scopes.join(" "))}` +
         `&code_challenge_method=S256` +
         `&code_challenge=${codeChallenge}`;
-
     window.location = authUrl;
 }
 
@@ -220,7 +279,6 @@ async function requestAccessToken(code) {
         redirect_uri,
         code_verifier: verifier
     });
-
     const res = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -230,12 +288,7 @@ async function requestAccessToken(code) {
 }
 
 async function refreshToken(refresh_token) {
-    const body = new URLSearchParams({
-        client_id,
-        grant_type: "refresh_token",
-        refresh_token
-    });
-
+    const body = new URLSearchParams({ client_id, grant_type: "refresh_token", refresh_token });
     const res = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -246,7 +299,6 @@ async function refreshToken(refresh_token) {
 
 async function handleAuth() {
     const params = new URLSearchParams(window.location.search);
-
     if (params.get("code")) {
         const tokenData = await requestAccessToken(params.get("code"));
         localStorage.setItem("access_token", tokenData.access_token);
@@ -254,179 +306,348 @@ async function handleAuth() {
         window.history.replaceState({}, document.title, redirect_uri);
         return tokenData.access_token;
     }
-
     const stored = localStorage.getItem("access_token");
     if (stored) return stored;
-
     startAuth();
 }
 
 async function getValidToken() {
-    let token = localStorage.getItem("access_token");
+    let tok = localStorage.getItem("access_token");
     const refresh_token = localStorage.getItem("refresh_token");
-
-    if (!token) return handleAuth();
+    if (!tok) return handleAuth();
 
     const test = await fetch("https://api.spotify.com/v1/me", {
-        headers: { Authorization: "Bearer " + token }
+        headers: { Authorization: "Bearer " + tok }
     });
 
     if (test.status === 401 && refresh_token) {
         const newTok = await refreshToken(refresh_token);
         localStorage.setItem("access_token", newTok.access_token);
-        if (newTok.refresh_token)
-            localStorage.setItem("refresh_token", newTok.refresh_token);
-
+        if (newTok.refresh_token) localStorage.setItem("refresh_token", newTok.refresh_token);
         return newTok.access_token;
     }
-
-    return token;
+    return tok;
 }
 
-/* ===================== LYRICS ===================== */
-
-function clearLyrics() {
-    document.getElementById("lyrics-container").innerHTML = "";
-}
-
-function scatterLyrics() {
-    clearLyrics();
-    if (!lyrics.length) return;
-
-    const container = document.getElementById("lyrics-container");
-    const columnsCount = 3;
-    const columns = [];
-
-    for (let i = 0; i < columnsCount; i++) {
-        const col = document.createElement("div");
-        col.className = "lyric-column";
-        container.appendChild(col);
-        columns.push(col);
-    }
-
-    lyrics.forEach((line, i) => {
-        const div = document.createElement("div");
-        div.className = "lyric-line";
-        div.id = `lyric-${i}`;
-        div.textContent = line.text;
-
-        columns[i % columnsCount].appendChild(div);
-
-        setTimeout(() => div.classList.add("show"), 80 * i);
-    });
-}
-
-function highlightLyric(currentIndex) {
-    document.querySelectorAll(".lyric-line")
-        .forEach(el => el.classList.remove("active"));
-
-    const active = document.getElementById(`lyric-${currentIndex}`);
-    if (active) active.classList.add("active");
-}
-
+/* ========== PARSE LRC (как было) ========== */
 function parseLRC(lrc) {
-    const lines = lrc.split("\n");
-    return lines.map(line => {
-        const t = line.match(/\[(\d{2}):(\d{2}\.\d{2})]/);
-        if (!t) return null;
-        return {
-            time: parseInt(t[1]) * 60 + parseFloat(t[2]),
-            text: line.replace(/\[.*?]/g, '').trim()
-        };
-    }).filter(x => x);
+    const lines = lrc.split(/\r?\n/);
+    const out = [];
+    for (let raw of lines) {
+        const t = raw.match(/\[(\d{2}):(\d{2}\.\d{2})]/);
+        if (!t) continue;
+        const time = parseInt(t[1]) * 60 + parseFloat(t[2]);
+        const text = raw.replace(/\[.*?]/g, '').trim();
+        out.push({ time, text });
+    }
+    return out;
 }
 
-function updateLyrics() {
-    if (!lyrics.length) return;
-
-    const now = (Date.now() - playbackStartTime) / 1000;
-    const idx = lyrics.findIndex(l => l.time > now) - 1;
-
-    if (idx >= 0) highlightLyric(idx);
-}
-
-function fetchLyrics(track, artist, album, duration) {
-    const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(track)}&artist_name=${encodeURIComponent(artist)}&album_name=${encodeURIComponent(album)}&duration=${duration}`;
-
+/* ========== FETCH LYRICS (оставил твой сервис) ========== */
+function fetchLyrics(track, artist, album, durationSec){
+    const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(track)}&artist_name=${encodeURIComponent(artist)}&album_name=${encodeURIComponent(album)}&duration=${durationSec}`;
     fetch(url)
         .then(r => r.json())
         .then(data => {
-            if (!data.syncedLyrics) return;
+            if (!data.syncedLyrics) {
+                lyrics = [];
+                clearDisplayedLyric();
+                return;
+            }
             lyrics = parseLRC(data.syncedLyrics);
-            scatterLyrics();
+            // при получении новых lyrics — сбрасываем индекс, чтобы показать с начала
+            currentLyricIndex = -1;
         })
-        .catch(e => console.log(e));
+        .catch(e => {
+            console.log("fetchLyrics error:", e);
+            lyrics = [];
+            clearDisplayedLyric();
+        });
 }
 
-/* ===================== PLAYER ===================== */
+/* ========== ПОКАЗ ОДНОЙ СТРОКИ С РАЗЛИЧНЫМИ ЭФФЕКТАМИ ========== */
+const lyricEl = document.getElementById('lyric-line');
+const wrapper = document.getElementById('lyric-wrapper');
 
+function clearDisplayedLyric() {
+    lyricEl.innerHTML = "";
+    lyricEl.style.opacity = 0;
+    currentLyricIndex = -1;
+}
+
+/* список доступных эффектов */
+const EFFECTS = [
+    'fadeZoom',    // плавный fade+zoom
+    'slideLeft',   // с левого края
+    'slideRight',  // с правого края
+    'pop',         // pop из центра
+    'typewriter',  // по буквам
+    'glitch',      // glitch
+    'rotate3d',    // 3D rotate
+    'zoomPulse',   // zoom + pulse
+    'particle'     // burst частиц при появлении
+];
+
+/* функция для очистки старых частиц */
+function clearParticles() {
+    document.querySelectorAll('.particle').forEach(p => p.remove());
+}
+
+/* particle burst helper */
+function createParticleBurst(cx, cy, color='rgba(255,255,255,0.95)', count=22) {
+    clearParticles();
+    for (let i=0;i<count;i++){
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        p.style.background = color;
+        // рандомные направления
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 60 + Math.random()*140;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        // анимация через transition
+        p.style.transition = `transform ${0.85 + Math.random()*0.45}s cubic-bezier(.2,.9,.25,1), opacity .7s linear`;
+        document.body.appendChild(p);
+        // small timeout чтобы браузер успел отрисовать элемент
+        requestAnimationFrame(() => {
+            p.style.opacity = 1;
+            p.style.transform = `translate(${dx}px, ${dy}px) scale(${0.6 + Math.random()})`;
+        });
+        // исчезновение через время
+        setTimeout(()=>{ p.style.opacity = 0; }, 650 + Math.random()*350);
+        setTimeout(()=> p.remove(), 1400 + Math.random()*300);
+    }
+}
+
+/* Главная функция показа одной строки */
+function showLyricLine(objLine) {
+    if (!objLine || !objLine.text) {
+        // очистить
+        lyricEl.innerHTML = "";
+        lyricEl.style.opacity = 0;
+        return;
+    }
+    const text = objLine.text;
+    // сброс
+    lyricEl.className = "";
+    lyricEl.style.opacity = 0;
+    lyricEl.style.transform = "";
+    lyricEl.innerHTML = "";
+    clearParticles();
+
+    // выбрать эффект
+    const effect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
+
+    // общий тайминг: сколько держать строку видимой до следующей (оставляем управляться LRC, но задаём мягкий fail-safe)
+    const visibleDuration = 2400; // минимально оставим 2.4s видимой если LRC быстро
+
+    if (effect === 'typewriter') {
+        // разбиваем на символы
+        const chars = Array.from(text);
+        lyricEl.style.opacity = 1;
+        lyricEl.style.whiteSpace = 'nowrap';
+        // создаём span для каждой буквы
+        chars.forEach((ch, i) => {
+            const span = document.createElement('span');
+            span.className = 'char';
+            span.textContent = ch;
+            // задержка появления каждой буквы
+            span.style.animationDelay = (i * 28) + 'ms';
+            span.classList.add('char-animate');
+            lyricEl.appendChild(span);
+        });
+        // небольшая задержка перед добавлением анимации выхода
+        setTimeout(()=> {
+            // добавим лёгкий pulse (через класс)
+            lyricEl.classList.add('in-zoomPulse');
+        }, 10);
+        // auto-clear: если следующая строка долго не придёт, уйдём
+        scheduleAutoClear(visibleDuration + text.length * 28 + 400);
+        return;
+    }
+
+    if (effect === 'glitch') {
+        lyricEl.setAttribute('data-text', text);
+        lyricEl.classList.add('glitch');
+        lyricEl.textContent = text;
+        // покажем через общий in-fadeZoom
+        lyricEl.classList.add('in-fadeZoom');
+        scheduleAutoClear(2100);
+        return;
+    }
+
+    if (effect === 'particle') {
+        lyricEl.textContent = text;
+        lyricEl.classList.add('in-pop');
+        // burst вокруг центра строки
+        const rect = lyricEl.getBoundingClientRect();
+        // но элемент ещё не отрисован — используем центр окна
+        const cx = window.innerWidth/2 + (Math.random()-0.5)*40;
+        const cy = window.innerHeight/2;
+        setTimeout(()=> createParticleBurst(cx, cy, 'rgba(255,255,255,0.95)', 22), 80);
+        scheduleAutoClear(2200);
+        return;
+    }
+
+    // остальные эффекты — простые: slideLeft, slideRight, pop, rotate3d, fadeZoom
+    switch(effect){
+        case 'fadeZoom':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-fadeZoom');
+            scheduleAutoClear(2000);
+            break;
+        case 'slideLeft':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-slideLeft');
+            scheduleAutoClear(2000);
+            break;
+        case 'slideRight':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-slideRight');
+            scheduleAutoClear(2000);
+            break;
+        case 'pop':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-pop');
+            scheduleAutoClear(1900);
+            break;
+        case 'rotate3d':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-rotate3d');
+            scheduleAutoClear(2100);
+            break;
+        case 'zoomPulse':
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-zoomPulse');
+            scheduleAutoClear(2000);
+            break;
+        default:
+            lyricEl.textContent = text;
+            lyricEl.classList.add('in-fadeZoom');
+            scheduleAutoClear(2000);
+    }
+}
+
+/* Убираем текущую строку — плавный выход */
+let autoClearTimeout = null;
+function scheduleAutoClear(ms) {
+    if (autoClearTimeout) clearTimeout(autoClearTimeout);
+    autoClearTimeout = setTimeout(()=> {
+        lyricEl.classList.remove('in-fadeZoom','in-slideLeft','in-slideRight','in-pop','in-rotate3d','in-zoomPulse','char-animate');
+        // добавляем класс выхода
+        lyricEl.classList.add('out-fade');
+        setTimeout(()=> {
+            lyricEl.innerHTML = '';
+            lyricEl.className = '';
+            clearParticles();
+        }, 520);
+    }, ms);
+}
+
+/* ========== updateLyrics — сверяем время и меняем строку ========== */
+function updateLyrics() {
+    if (!lyrics || !lyrics.length) return;
+    const now = (Date.now() - playbackStartTime) / 1000;
+    // найти индекс строки, которая идёт в данный момент
+    let idx = lyrics.findIndex(l => l.time > now) - 1;
+    if (idx < 0) idx = 0;
+    if (idx >= lyrics.length) idx = lyrics.length - 1;
+
+    if (idx !== currentLyricIndex) {
+        currentLyricIndex = idx;
+        const line = lyrics[idx];
+        // показываем строку одной функцией
+        showLyricLine(line);
+    }
+}
+
+/* Очистка коли трек закончился */
+function clearLyricsAndVisual() {
+    lyrics = [];
+    currentLyricIndex = -1;
+    clearDisplayedLyric();
+}
+
+/* ========== PLAYER: получение текущего трека (как у тебя) ========== */
 async function initPlayer() {
     token = await getValidToken();
+    // poll song and update lyrics timing
     setInterval(() => fetchSong(token), 1500);
-    setInterval(updateLyrics, 400);
+    setInterval(updateLyrics, 240); // частая проверка для плавной смены
 }
-
 initPlayer();
 
 function fetchSong(token) {
     fetch('https://api.spotify.com/v1/me/player/currently-playing', {
         headers: { 'Authorization': 'Bearer ' + token }
     })
-    .then(res => res.json())
+    .then(res => {
+        if (res.status === 204) return null; // нет контента
+        return res.json();
+    })
     .then(data => {
-        if (!data || !data.item) {
-            clearLyrics();
+        if(!data || !data.item) {
+            // если нет воспроизведения — очистим
+            clearLyricsAndVisual();
             lastTrackId = "";
             return;
         }
-
         const track = data.item;
 
+        // если сменился трек — загрузим новые lyrics
         if (track.id !== lastTrackId) {
             lastTrackId = track.id;
-            clearLyrics();
             lyrics = [];
-
+            currentLyricIndex = -1;
             document.getElementById('trackName').textContent = track.name;
-            document.getElementById('artistName').textContent =
-                track.artists.map(a => a.name).join(', ');
-
-            fetchLyrics(track.name, track.artists[0].name, track.album.name, track.duration_ms / 1000);
+            document.getElementById('artistName').textContent = track.artists.map(a=>a.name).join(', ');
+            fetchLyrics(track.name, track.artists[0].name, track.album.name, track.duration_ms/1000);
         }
 
         duration = track.duration_ms / 1000;
-        playbackStartTime = Date.now() - data.progress_ms;
+        playbackStartTime = Date.now() - (data.progress_ms || 0);
         isPaused = !data.is_playing;
 
-        const cover = track.album.images[0].url;
-        if (cover !== currentAlbum) {
+        const cover = track.album.images && track.album.images[0] && track.album.images[0].url;
+        if (cover && cover !== currentAlbum) {
             currentAlbum = cover;
             const albumImg = document.getElementById('albumImage');
             albumImg.style.opacity = 0;
-
-            setTimeout(() => {
+            setTimeout(()=> {
                 albumImg.src = cover;
                 albumImg.style.opacity = 1;
                 document.getElementById('blur-bg').style.backgroundImage = `url(${cover})`;
-            }, 300);
+            }, 260);
         }
 
+        // rotation class update
         updateRotation();
     })
-    .catch(e => console.log(e));
+    .catch(e => {
+        console.log("fetchSong error:", e);
+    });
 }
 
-/* ===================== ROTATION ===================== */
-
+/* rotation behavior (как у тебя) */
 function updateRotation() {
     const vinyl = document.getElementById('vinyl-container');
-    if (!isPaused) {
+    if(!isPaused){
         vinyl.classList.add('spinning');
         vinyl.classList.remove('paused');
     } else {
         vinyl.classList.add('paused');
     }
 }
+
+/* при ресайзе можно подстраивать — убираем лишние частицы */
+window.addEventListener('resize', () => clearParticles());
+
+/* при выгрузке страницы — чистим таймеры */
+window.addEventListener('beforeunload', () => {
+    if (autoClearTimeout) clearTimeout(autoClearTimeout);
+});
 </script>
 </body>
 </html>
